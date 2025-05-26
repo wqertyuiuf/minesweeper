@@ -1,0 +1,365 @@
+//code
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace Minesweeper
+{
+    public partial class MainForm : Form
+    {
+        private int rows = 9;
+        private int cols = 9;
+        private int minesCount = 10;
+        private int flagsCount = 0;
+        private Button[,] buttons;
+        private bool[,] mines;
+        private bool[,] opened;
+        private bool[,] flags;
+        private bool firstClick = true;
+        private bool gameOver = false;
+
+        private Label flagsLabel;
+        private ToolStripMenuItem newGameToolStripMenuItem;
+        private ToolStripMenuItem easyToolStripMenuItem;
+        private ToolStripMenuItem mediumToolStripMenuItem;
+        private ToolStripMenuItem hardToolStripMenuItem;
+        private MenuStrip menuStrip1;
+
+        public MainForm()
+        {
+            InitializeComponent();
+            InitializeMenu();
+            InitializeGame();
+        }
+
+        private void InitializeMenu()
+        {
+            // Menu Strip
+            menuStrip1 = new MenuStrip();
+            this.Controls.Add(menuStrip1);
+
+            // Game Menu
+            newGameToolStripMenuItem = new ToolStripMenuItem("Новая игра");
+            menuStrip1.Items.Add(newGameToolStripMenuItem);
+
+            // Difficulty Menu
+            ToolStripMenuItem difficultyToolStripMenuItem = new ToolStripMenuItem("Сложность");
+            menuStrip1.Items.Add(difficultyToolStripMenuItem);
+
+            easyToolStripMenuItem = new ToolStripMenuItem("Легкая (9x9, 10 мин)");
+            mediumToolStripMenuItem = new ToolStripMenuItem("Средняя (16x16, 40 мин)");
+            hardToolStripMenuItem = new ToolStripMenuItem("Сложная (16x30, 99 мин)");
+
+            difficultyToolStripMenuItem.DropDownItems.Add(easyToolStripMenuItem);
+            difficultyToolStripMenuItem.DropDownItems.Add(mediumToolStripMenuItem);
+            difficultyToolStripMenuItem.DropDownItems.Add(hardToolStripMenuItem);
+
+            easyToolStripMenuItem.Click += (s, e) => SetDifficulty(9, 9, 10);
+            mediumToolStripMenuItem.Click += (s, e) => SetDifficulty(16, 16, 40);
+            hardToolStripMenuItem.Click += (s, e) => SetDifficulty(16, 30, 99);
+            newGameToolStripMenuItem.Click += (s, e) => InitializeGame();
+
+            // Flags counter
+            flagsLabel = new Label
+            {
+                Text = "Флаги: 0/" + minesCount,
+                Font = new Font("Arial", 12),
+                AutoSize = true,
+                Location = new Point(10, 30)
+            };
+            this.Controls.Add(flagsLabel);
+        }
+
+        private void SetDifficulty(int rows, int cols, int minesCount)
+        {
+            this.rows = rows;
+            this.cols = cols;
+            this.minesCount = minesCount;
+            InitializeGame();
+        }
+
+        private void InitializeGame()
+        {
+            // Clear previous buttons if any
+            if (buttons != null)
+            {
+                foreach (var button in buttons)
+                {
+                    this.Controls.Remove(button);
+                }
+            }
+
+            // Reset game state
+            firstClick = true;
+            gameOver = false;
+            flagsCount = 0;
+            flagsLabel.Text = "Флаги: 0/" + minesCount;
+
+            // Adjust form size
+            this.ClientSize = new Size(cols * 30 + 20, rows * 30 + 70);
+
+            // Initialize arrays
+            buttons = new Button[rows, cols];
+            mines = new bool[rows, cols];
+            opened = new bool[rows, cols];
+            flags = new bool[rows, cols];
+
+            // Create buttons
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    buttons[i, j] = new Button
+                    {
+                        Width = 30,
+                        Height = 30,
+                        Location = new Point(j * 30 + 10, i * 30 + 60),
+                        Tag = new Point(i, j),
+                        Font = new Font("Arial", 10, FontStyle.Bold)
+                    };
+
+                    buttons[i, j].MouseUp += Button_MouseUp;
+                    this.Controls.Add(buttons[i, j]);
+                }
+            }
+        }
+
+        private void Button_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (gameOver) return;
+
+            var button = (Button)sender;
+            var position = (Point)button.Tag;
+            int row = position.X;
+            int col = position.Y;
+
+            if (e.Button == MouseButtons.Right)
+            {
+                // Toggle flag
+                if (!opened[row, col])
+                {
+                    flags[row, col] = !flags[row, col];
+                    if (flags[row, col])
+                    {
+                        flagsCount++;
+                        button.Text = "🚩";
+                    }
+                    else
+                    {
+                        flagsCount--;
+                        button.Text = "";
+                    }
+                    flagsLabel.Text = "Флаги: " + flagsCount + "/" + minesCount;
+                }
+            }
+            else if (e.Button == MouseButtons.Left && !flags[row, col])
+            {
+                if (firstClick)
+                {
+                    PlaceMines(row, col);
+                    firstClick = false;
+                }
+
+                if (mines[row, col])
+                {
+                    // Game over
+                    button.BackColor = Color.Red;
+                    RevealAllMines();
+                    gameOver = true;
+                    MessageBox.Show("Игра окончена! Вы проиграли.");
+                }
+                else
+                {
+                    OpenCell(row, col);
+                    if (CheckWin())
+                    {
+                        gameOver = true;
+                        MessageBox.Show("Поздравляем! Вы победили!");
+                    }
+                }
+            }
+        }
+
+        private void PlaceMines(int safeRow, int safeCol)
+        {
+            Random random = new Random();
+            int minesPlaced = 0;
+
+            while (minesPlaced < minesCount)
+            {
+                int row = random.Next(rows);
+                int col = random.Next(cols);
+
+                // Don't place mine on safe cell or where mine already exists
+                if ((row != safeRow || col != safeCol) && !mines[row, col])
+                {
+                    mines[row, col] = true;
+                    minesPlaced++;
+                }
+            }
+        }
+
+        private void OpenCell(int row, int col)
+        {
+            if (row < 0 || row >= rows || col < 0 || col >= cols || opened[row, col] || flags[row, col])
+                return;
+
+            opened[row, col] = true;
+            buttons[row, col].Enabled = false;
+
+            int adjacentMines = CountAdjacentMines(row, col);
+
+            if (adjacentMines > 0)
+            {
+                buttons[row, col].Text = adjacentMines.ToString();
+                buttons[row, col].ForeColor = GetNumberColor(adjacentMines);
+            }
+            else
+            {
+                // Open adjacent cells
+                for (int i = -1; i <= 1; i++)
+                {
+                    for (int j = -1; j <= 1; j++)
+                    {
+                        if (i != 0 || j != 0)
+                        {
+                            OpenCell(row + i, col + j);
+                        }
+                    }
+                }
+            }
+        }
+
+        private int CountAdjacentMines(int row, int col)
+        {
+            int count = 0;
+
+            for (int i = -1; i <= 1; i++)
+            {
+                for (int j = -1; j <= 1; j++)
+                {
+                    if (i == 0 && j == 0) continue;
+
+                    int newRow = row + i;
+                    int newCol = col + j;
+
+                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols && mines[newRow, newCol])
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private Color GetNumberColor(int number)
+        {
+            switch (number)
+            {
+                case 1: return Color.Blue;
+                case 2: return Color.Green;
+                case 3: return Color.Red;
+                case 4: return Color.DarkBlue;
+                case 5: return Color.Brown;
+                case 6: return Color.Teal;
+                case 7: return Color.Black;
+                case 8: return Color.Gray;
+                default: return Color.Black;
+            }
+        }
+
+        private bool CheckWin()
+        {
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    if (!mines[i, j] && !opened[i, j])
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private void RevealAllMines()
+        {
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    if (mines[i, j])
+                    {
+                        buttons[i, j].Text = "💣";
+                        buttons[i, j].Enabled = false;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+//program.cs
+using System;
+using System.Windows.Forms;
+
+namespace Minesweeper
+{
+    internal static class Program
+    {
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new MainForm());
+        }
+    }
+}
+//form1.designer.cs
+
+namespace Minesweeper
+{
+    partial class MainForm
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.components = new System.ComponentModel.Container();
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(300, 300);
+            this.Text = "Сапер";
+        }
+
+        #endregion
+    }
+}
