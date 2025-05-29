@@ -1,4 +1,6 @@
-//code
+//НЕЧЕГО НЕ УДАЛЯТЬ
+
+
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -24,7 +26,7 @@ namespace Minesweeper
         private ToolStripMenuItem mediumToolStripMenuItem;
         private ToolStripMenuItem hardToolStripMenuItem;
         private MenuStrip menuStrip1;
-
+            
         public MainForm()
         {
             InitializeComponent();
@@ -34,15 +36,12 @@ namespace Minesweeper
 
         private void InitializeMenu()
         {
-            // Menu Strip
             menuStrip1 = new MenuStrip();
             this.Controls.Add(menuStrip1);
 
-            // Game Menu
             newGameToolStripMenuItem = new ToolStripMenuItem("Новая игра");
             menuStrip1.Items.Add(newGameToolStripMenuItem);
 
-            // Difficulty Menu
             ToolStripMenuItem difficultyToolStripMenuItem = new ToolStripMenuItem("Сложность");
             menuStrip1.Items.Add(difficultyToolStripMenuItem);
 
@@ -59,7 +58,7 @@ namespace Minesweeper
             hardToolStripMenuItem.Click += (s, e) => SetDifficulty(16, 30, 99);
             newGameToolStripMenuItem.Click += (s, e) => InitializeGame();
 
-            // Flags counter
+            //счетсчик флажков
             flagsLabel = new Label
             {
                 Text = "Флаги: 0/" + minesCount,
@@ -80,7 +79,7 @@ namespace Minesweeper
 
         private void InitializeGame()
         {
-            // Clear previous buttons if any
+            
             if (buttons != null)
             {
                 foreach (var button in buttons)
@@ -89,22 +88,22 @@ namespace Minesweeper
                 }
             }
 
-            // Reset game state
+            //сброс игры
             firstClick = true;
             gameOver = false;
             flagsCount = 0;
             flagsLabel.Text = "Флаги: 0/" + minesCount;
 
-            // Adjust form size
+            
             this.ClientSize = new Size(cols * 30 + 20, rows * 30 + 70);
 
-            // Initialize arrays
+           
             buttons = new Button[rows, cols];
             mines = new bool[rows, cols];
             opened = new bool[rows, cols];
             flags = new bool[rows, cols];
 
-            // Create buttons
+            
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
@@ -135,7 +134,7 @@ namespace Minesweeper
 
             if (e.Button == MouseButtons.Right)
             {
-                // Toggle flag
+                //флажок
                 if (!opened[row, col])
                 {
                     flags[row, col] = !flags[row, col];
@@ -162,7 +161,7 @@ namespace Minesweeper
 
                 if (mines[row, col])
                 {
-                    // Game over
+                    //конец игры
                     button.BackColor = Color.Red;
                     RevealAllMines();
                     gameOver = true;
@@ -190,7 +189,7 @@ namespace Minesweeper
                 int row = random.Next(rows);
                 int col = random.Next(cols);
 
-                // Don't place mine on safe cell or where mine already exists
+                // мины нет в свободной ячейке
                 if ((row != safeRow || col != safeCol) && !mines[row, col])
                 {
                     mines[row, col] = true;
@@ -216,7 +215,7 @@ namespace Minesweeper
             }
             else
             {
-                // Open adjacent cells
+                //открытие ячеек
                 for (int i = -1; i <= 1; i++)
                 {
                     for (int j = -1; j <= 1; j++)
@@ -302,41 +301,14 @@ namespace Minesweeper
 }
 
 
-//program.cs
-using System;
-using System.Windows.Forms;
 
-namespace Minesweeper
-{
-    internal static class Program
-    {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
-        }
-    }
-}
-//form1.designer.cs
+ltcbuyth 
 
 namespace Minesweeper
 {
     partial class MainForm
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
-
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -347,11 +319,6 @@ namespace Minesweeper
         }
 
         #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
@@ -361,5 +328,23 @@ namespace Minesweeper
         }
 
         #endregion
+    }
+}
+
+
+using System;
+using System.Windows.Forms;
+
+namespace Minesweeper
+{
+    internal static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new MainForm());
+        }
     }
 }
